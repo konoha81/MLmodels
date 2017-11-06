@@ -105,7 +105,7 @@ class MLmodels(object):
 
         # GridSearch用パラメータ
         parameters = {
-                'n_estimators'      : [700, 1000, 1250, 1500, 2000],
+                'n_estimators'      : [50, 100, 500, 1000, 1500],
                 'max_features'      : [1, 3, 10],
                 'random_state'      : [0],
                 'n_jobs'            : [-1],
@@ -116,14 +116,15 @@ class MLmodels(object):
 
         # テスト用
         test_parameters = {
-                'n_estimators'      : [1500],
+                'n_estimators'      : [100],
                 'max_features'      : ['auto'],
                 'random_state'      : [0],
                 'n_jobs'            : [-1],
-                'min_samples_split' : [5],
-                'max_depth'         : [20],
+                'min_samples_split' : [3],
+                'max_depth'         : [3],
                 'class_weight'      : ['balanced']
         }
+
 
         if test==True:
             parameters = test_parameters
