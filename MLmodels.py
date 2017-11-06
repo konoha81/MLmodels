@@ -9,27 +9,35 @@ from sklearn.externals import joblib
 from sklearn.preprocessing import Imputer
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score
 import pandas as pd
-import datetime
+import datetime, os
 
 import xgboost as xgb
 
 class MLmodels(object):
-
-    def __init__(self, P_or_M, X_train, X_test, y_train, y_test):
-        self.P_or_M = P_or_M
+    """
+    機械学習モデルのセット。
+    作成済み：XGboost, RandomForest
+    （作成予定：SVM, Logistic regression)
+    """
+    
+    def __init__(self, X_train, X_test, y_train, y_test):
         self.X_train = X_train
         self.X_test = X_test
         self.y_train = y_train
         self.y_test = y_test
 
     def XGmodel(self, test=False):
+        """
+        XGboost。 test=Trueのときはテスト用パラメータで動く。
+        """
 
+        # GridSearch用パラメータ
         parameters = {'max_depth': [2,5,7],
                       'n_estimators': [100,200,500,1000],
                       'subsample': [0.95],
                       'colsample_bytree': [1.0]
                   }
-
+        # テスト用
         test_parameters = {'max_depth': [2],
                            'n_estimators': [50],
                            'subsample': [0.95],
@@ -47,13 +55,18 @@ class MLmodels(object):
                 scoring="log_loss",
                 n_jobs=10,
                 verbose=2)
+
         return clf
 
 
     def RFmodel(self, test=False):
-        # RFのGridSearch用パラメータ
+        """
+        RandomForest test=Trueのときはテスト用パラメータで動く。
+        """
+
+        # GridSearch用パラメータ
         parameters = {
-                'n_estimators'      : [700, 1000, 1250, 1500, 2000],
+                'n_estimators'      : [50, 100, 500, 1000, 1500],
                 'max_features'      : [1, 3, 10],
                 'random_state'      : [0],
                 'n_jobs'            : [-1],
@@ -64,12 +77,12 @@ class MLmodels(object):
 
         # テスト用
         test_parameters = {
-                'n_estimators'      : [1500],
+                'n_estimators'      : [100],
                 'max_features'      : ['auto'],
                 'random_state'      : [0],
                 'n_jobs'            : [-1],
-                'min_samples_split' : [5],
-                'max_depth'         : [20],
+                'min_samples_split' : [3],
+                'max_depth'         : [3],
                 'class_weight'      : ['balanced']
         }
 
@@ -86,6 +99,10 @@ class MLmodels(object):
         return clf
 
     def fit_and_prediction(self, clf, save=False):
+        """
+        モデルの fit と テストデータでの predict を行う。
+        save=True でモデルをpickle化して保存する。
+        """
 
         clf.fit(self.X_train,self.y_train)
 
@@ -96,25 +113,32 @@ class MLmodels(object):
         print('Confusion matrix:{}'.format(confusion_matrix(self.y_test, predict)))
         print(classification_report(self.y_test, predict))
 
+        # モデルの保存
         if save == True:
-            # モデルの保存
+            # 実行時の日付と時間を取得
             todaydetail = datetime.datetime.today()
             td = todaydetail.strftime('%y%m%d_%H%M')
-            # モデルの名前は patient, medicine で変更する
-            joblib.dump(clf, './pickled_model/RF_{}_{}.pkl'.format(self.P_or_M ,td))
+
+            # モデルの保存先がない場合はディレクトリを作成する。
+            if os.path.exists('./pickled_model/'):
+                os.mkdir("pickled_model")
+
+            # pkl化する
+            joblib.dump(clf, './pickled_model/{}_{}.pkl'.format(td))
             print('model saved.')
 
-            # 保存したモデル名を返す
-            return 'RF_{}_{}.pkl'.format(self.P_or_M ,td)
+            # 保存したモデル名をprint
+            return '{}_{}.pkl'.format(td)
 
 
     def RFmodel_call(self, modelname):
         '''
-        作成したモデルを読み込む
+        作成したモデル（modelnameで指定）を読み込む
         '''
         clf = joblib.load('./pickled_model/{}'.format(modelname + '.pkl'))
 
         predict = clf.predict(self.X_test)
+
         print('Best parameters:{}'.format(clf.best_params_))
         print('Confusion matrix:{}'.format(confusion_matrix(self.y_test, predict)))
         print(classification_report(self.y_test, predict))
@@ -123,9 +147,14 @@ class MLmodels(object):
         fti = clf.best_estimator_.feature_importances_
         features = pdf.iloc[:,1:].columns
 
+        # 特徴量とその重要度を DataFrame に入力する。
         f = pd.DataFrame({'features': features,
                  'feature_importances': fti
                  })
         f = f.sort_values('features',ascending=False)
+
+        # CSVの保存先がない場合はディレクトリを作成する。
+        if os.path.exists('./importances/'):
+            os.mkdir('importances')
 
         f.to_csv('./importances/{}.csv'.format(modelname))
