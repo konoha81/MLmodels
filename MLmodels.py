@@ -19,7 +19,7 @@ class MLmodels(object):
     作成済み：XGboost, RandomForest
     （作成予定：SVM, Logistic regression)
     """
-    
+
     def __init__(self, X_train, X_test, y_train, y_test):
         self.X_train = X_train
         self.X_test = X_test
@@ -125,10 +125,9 @@ class MLmodels(object):
 
             # pkl化する
             joblib.dump(clf, './pickled_model/{}_{}.pkl'.format(td))
-            print('model saved.')
 
             # 保存したモデル名をprint
-            return '{}_{}.pkl'.format(td)
+            print('Model Saved: {}_{}.pkl'.format(td))
 
 
     def RFmodel_call(self, modelname):
